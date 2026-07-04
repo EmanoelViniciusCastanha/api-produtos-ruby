@@ -44,7 +44,7 @@ group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
   # Suíte de testes
-  gem "rspec-rails", "~> 7.1"
+  gem "rspec-rails", "~> 8.0"
 
   # Gera o OpenAPI a partir das specs de request
   gem "rswag-specs"
