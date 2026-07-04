@@ -57,7 +57,3 @@ curl -X POST http://localhost:8080/produtos/1/movimentacoes \
 ```
 
 ---
-
-Projeto feito para praticar a base da lógica de programação (variáveis e
-constantes, operadores, condicionais, repetição, arrays e funções) dentro de uma
-API real.
