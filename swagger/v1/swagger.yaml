@@ -1,0 +1,328 @@
+---
+openapi: 3.0.1
+info:
+  title: API de Estoque de Produtos
+  version: v1
+  description: Controle de estoque com produtos e movimentações (entradas/saídas).
+    O saldo é derivado das movimentações e nunca fica negativo.
+paths:
+  "/produtos/{produto_id}/movimentacoes":
+    parameters:
+    - name: produto_id
+      in: path
+      schema:
+        type: integer
+      description: ID do produto
+      required: true
+    get:
+      summary: Lista o histórico de movimentações do produto
+      tags:
+      - Movimentações
+      responses:
+        '200':
+          description: histórico retornado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Movimentacao"
+    post:
+      summary: Registra uma entrada ou saída
+      tags:
+      - Movimentações
+      parameters: []
+      responses:
+        '201':
+          description: movimentação registrada (retorna o produto com o saldo atualizado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  movimentacao:
+                    "$ref": "#/components/schemas/Movimentacao"
+                  produto:
+                    "$ref": "#/components/schemas/Produto"
+        '422':
+          description: saída maior que o saldo (ou dados inválidos)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Erros"
+        '404':
+          description: produto não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  erro:
+                    type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/MovimentacaoInput"
+  "/produtos":
+    get:
+      summary: Lista os produtos
+      tags:
+      - Produtos
+      parameters:
+      - name: categoria
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filtra por categoria
+      responses:
+        '200':
+          description: lista retornada
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Produto"
+    post:
+      summary: Cadastra um produto
+      tags:
+      - Produtos
+      parameters: []
+      responses:
+        '201':
+          description: produto criado (nasce com saldo 0)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Produto"
+        '422':
+          description: dados inválidos
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Erros"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/ProdutoInput"
+  "/produtos/relatorio":
+    get:
+      summary: Relatório consolidado do estoque
+      tags:
+      - Produtos
+      responses:
+        '200':
+          description: relatório gerado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_de_produtos:
+                    type: integer
+                  unidades_totais:
+                    type: integer
+                  valor_total_estoque:
+                    type: number
+                  custo_reposicao:
+                    type: number
+                  itens_criticos:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Produto"
+                  categoria_mais_estoque:
+                    type: string
+                  niveis_de_estoque:
+                    type: array
+                    items:
+                      type: string
+  "/produtos/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      description: ID do produto
+      required: true
+    get:
+      summary: Detalha um produto
+      tags:
+      - Produtos
+      responses:
+        '200':
+          description: produto encontrado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Produto"
+        '404':
+          description: produto não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  erro:
+                    type: string
+    patch:
+      summary: Atualiza os dados do produto (não o saldo)
+      tags:
+      - Produtos
+      parameters: []
+      responses:
+        '200':
+          description: produto atualizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Produto"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/ProdutoInput"
+    delete:
+      summary: Remove um produto
+      tags:
+      - Produtos
+      responses:
+        '204':
+          description: produto removido
+servers:
+- url: http://localhost:{port}
+  variables:
+    port:
+      default: '8080'
+components:
+  schemas:
+    Produto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Notebook Dell
+        categoria:
+          type: string
+          enum:
+          - Geral
+          - Eletrônicos
+          - Alimentos
+          - Limpeza
+          - Vestuário
+          example: Eletrônicos
+        saldo:
+          type: integer
+          example: 12
+        preco:
+          type: number
+          format: float
+          example: 3500.0
+        estoque_minimo:
+          type: integer
+          example: 5
+        situacao:
+          type: string
+          enum:
+          - OK
+          - ESTOQUE BAIXO
+          - SEM ESTOQUE
+          example: OK
+        valor_em_estoque:
+          type: number
+          format: float
+          example: 42000.0
+    ProdutoInput:
+      type: object
+      properties:
+        produto:
+          type: object
+          properties:
+            nome:
+              type: string
+              example: Cadeira Gamer
+            categoria:
+              type: string
+              enum:
+              - Geral
+              - Eletrônicos
+              - Alimentos
+              - Limpeza
+              - Vestuário
+              example: Geral
+            preco:
+              type: number
+              format: float
+              example: 899.9
+            estoque_minimo:
+              type: integer
+              example: 3
+          required:
+          - nome
+          - categoria
+          - preco
+          - estoque_minimo
+      required:
+      - produto
+    Movimentacao:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        produto_id:
+          type: integer
+          example: 1
+        tipo:
+          type: string
+          enum:
+          - entrada
+          - saida
+          example: entrada
+        quantidade:
+          type: integer
+          example: 20
+        observacao:
+          type: string
+          nullable: true
+          example: Compra
+        data:
+          type: string
+          format: date-time
+    MovimentacaoInput:
+      type: object
+      properties:
+        movimentacao:
+          type: object
+          properties:
+            tipo:
+              type: string
+              enum:
+              - entrada
+              - saida
+              example: entrada
+            quantidade:
+              type: integer
+              example: 20
+            observacao:
+              type: string
+              example: Compra
+          required:
+          - tipo
+          - quantidade
+      required:
+      - movimentacao
+    Erros:
+      type: object
+      properties:
+        erros:
+          type: array
+          items:
+            type: string
+          example:
+          - Nome can't be blank
